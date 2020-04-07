@@ -3,6 +3,9 @@ import json
 import var_int
 from packet_helper import Packet, write_string
 
+class PacketError(OSError):
+    """An error for a bad packet"""
+
 def wait_for_wake(ip, port, version_string, quiet=False):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((ip, port))
@@ -15,7 +18,7 @@ def wait_for_wake(ip, port, version_string, quiet=False):
     version = var_int.read(var_int.byte_helper(handshake.data))
     status_query = Packet.recv(conn)
     if status_query.id != 0 or status_query.data:
-        raise OSError('Bad packet: {}'.format(status_query))
+        raise PacketError('Bad packet: {}'.format(status_query))
     status_json = json.dumps({
         'version': {
             'name': version_string,
@@ -33,7 +36,7 @@ def wait_for_wake(ip, port, version_string, quiet=False):
     status.send(conn)
     ping = Packet.recv(conn)
     if ping.id != 1:
-        raise OSError('Bad packet: {}'.format(ping))
+        raise PacketError('Bad packet: {}'.format(ping))
     pong = Packet(1, ping.data)
     pong.send(conn)
     conn.close()
@@ -41,11 +44,11 @@ def wait_for_wake(ip, port, version_string, quiet=False):
 def main():
     while True:
         try:
-            wait_for_wake('0.0.0.0', 25565, '1.14.4'):
+            wait_for_wake('0.0.0.0', 25565, '1.14.4')
             print('Waking server')
             return
-        except OSError:
-            pass
+        except PacketError as ex:
+            print(ex)
 
 if __name__ == '__main__':
     main()
